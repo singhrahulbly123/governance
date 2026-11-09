@@ -15,10 +15,16 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'initial_administrator' => [
+    'initial_super_administrator' => [
         'email' => env('INITIAL_ADMIN_EMAIL'),
         'name' => env('INITIAL_ADMIN_NAME'),
         'password' => env('INITIAL_ADMIN_PASSWORD'),
+    ],
+
+    'initial_administrator' => [
+        'email' => env('INITIAL_STANDARD_ADMIN_EMAIL'),
+        'name' => env('INITIAL_STANDARD_ADMIN_NAME'),
+        'password' => env('INITIAL_STANDARD_ADMIN_PASSWORD'),
     ],
 
     /*

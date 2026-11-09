@@ -14,10 +14,27 @@ class InitialAdministratorSeeder extends Seeder
      */
     public function run(): void
     {
-        $administrator = config('app.initial_administrator');
+        $this->seedAdministrator(
+            config('app.initial_super_administrator'),
+            'super-administrator',
+            'INITIAL_ADMIN_NAME, INITIAL_ADMIN_EMAIL, and INITIAL_ADMIN_PASSWORD',
+        );
+
+        $this->seedAdministrator(
+            config('app.initial_administrator'),
+            'administrator',
+            'INITIAL_STANDARD_ADMIN_NAME, INITIAL_STANDARD_ADMIN_EMAIL, and INITIAL_STANDARD_ADMIN_PASSWORD',
+        );
+    }
+
+    /**
+     * @param  array{name: ?string, email: ?string, password: ?string}  $administrator
+     */
+    private function seedAdministrator(array $administrator, string $roleSlug, string $requiredSettings): void
+    {
 
         if (blank($administrator['name']) || blank($administrator['email']) || blank($administrator['password'])) {
-            $this->command?->warn('Initial administrator was not seeded because INITIAL_ADMIN_NAME, INITIAL_ADMIN_EMAIL, and INITIAL_ADMIN_PASSWORD are required.');
+            $this->command?->warn("{$roleSlug} was not seeded because {$requiredSettings} are required.");
 
             return;
         }
@@ -31,7 +48,7 @@ class InitialAdministratorSeeder extends Seeder
             ],
         );
 
-        $role = Role::query()->where('slug', 'super-administrator')->firstOrFail();
+        $role = Role::query()->where('slug', $roleSlug)->firstOrFail();
 
         $user->roles()->syncWithoutDetaching([$role->id]);
     }

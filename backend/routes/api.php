@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AcademicYearIndexController;
+use App\Http\Controllers\Api\V1\AdministrationOverviewController;
 use App\Http\Controllers\Api\V1\AuthenticatedSessionController;
 use App\Http\Controllers\Api\V1\AuthenticatedUserController;
 use App\Http\Controllers\Api\V1\DepartmentIndexController;
@@ -24,6 +25,10 @@ Route::prefix('v1')->middleware('throttle:60,1')->group(function (): void {
 
         Route::get('/user', AuthenticatedUserController::class)
             ->name('api.v1.user');
+
+        Route::get('/administration/overview', AdministrationOverviewController::class)
+            ->middleware('role:super-administrator')
+            ->name('api.v1.administration.overview');
 
         Route::get('/departments', DepartmentIndexController::class)
             ->middleware('can:viewAny,'.Department::class)

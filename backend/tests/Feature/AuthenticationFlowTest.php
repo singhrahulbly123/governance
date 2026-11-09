@@ -87,10 +87,32 @@ class AuthenticationFlowTest extends TestCase
         $this->assertTrue($user->can('viewAny', Department::class));
     }
 
+    public function test_super_administrators_can_view_administration_overview(): void
+    {
+        $superAdministrator = Role::factory()->create(['slug' => 'super-administrator']);
+        $administrator = Role::factory()->create(['slug' => 'administrator']);
+        $superAdministratorUser = User::factory()->create();
+        $administratorUser = User::factory()->create();
+
+        $superAdministratorUser->roles()->attach($superAdministrator);
+        $administratorUser->roles()->attach($administrator);
+
+        $this->actingAs($superAdministratorUser)
+            ->getJson('/api/v1/administration/overview')
+            ->assertOk()
+            ->assertJsonPath('data.administrators', 1)
+            ->assertJsonPath('data.super_administrators', 1)
+            ->assertJsonPath('data.total_users', 2);
+
+        $this->actingAs($administratorUser)
+            ->getJson('/api/v1/administration/overview')
+            ->assertForbidden();
+    }
+
     public function test_initial_administrator_is_seeded_from_environment_configuration(): void
     {
         $superAdministrator = Role::factory()->create(['slug' => 'super-administrator']);
-        Config::set('app.initial_administrator', [
+        Config::set('app.initial_super_administrator', [
             'name' => 'Platform Administrator',
             'email' => 'administrator@example.test',
             'password' => 'seeded-password',
