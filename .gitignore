@@ -1,0 +1,7 @@
+.env
+.tools/
+backend/.env
+backend/vendor/
+backend/bootstrap/cache/
+backend/storage/*.key
+*.log
