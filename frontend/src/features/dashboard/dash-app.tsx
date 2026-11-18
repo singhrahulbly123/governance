@@ -20,7 +20,12 @@ import {
     ROLES,
 } from "./dashboard-data";
 import { LiveRoleDashboard } from "./live-role-dashboard";
-import { AdminMasterDataScreen } from "./admin-master-data-screen";
+import { LiveAdminMasterDataScreen } from "./live-admin-master-data-screen";
+import {
+    ActivityTimelineScreen,
+    CalendarWorkspaceScreen,
+    TasksWorkspaceScreen,
+} from "./workspace-screens";
 import { UsersRolesScreen } from "./users-roles-screen";
 import {
     Avatar,
@@ -591,13 +596,13 @@ function DashAppInner({
                 case "notifications":
                     return <UtilityStub label="Notifications" />;
                 case "calendar":
-                    return <UtilityStub label="Calendar" />;
+                    return <CalendarWorkspaceScreen />;
                 case "tasks":
-                    return <UtilityStub label="Tasks" />;
+                    return <TasksWorkspaceScreen />;
                 case "approvals":
                     return <UtilityStub label="Approvals" />;
                 case "activity":
-                    return <UtilityStub label="Activity timeline" />;
+                    return <ActivityTimelineScreen />;
                 case "quickactions":
                     return <UtilityStub label="Quick actions" />;
                 case "health":
@@ -644,9 +649,8 @@ function DashAppInner({
         }
         if (isStandardAdmin) {
             return (
-                <AdminMasterDataScreen
+                <LiveAdminMasterDataScreen
                     userName={authUser?.name}
-                    onToast={onToast}
                 />
             );
         }

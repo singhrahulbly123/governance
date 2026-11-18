@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AcademicYearIndexController;
+use App\Http\Controllers\Api\V1\ActivityTimelineController;
 use App\Http\Controllers\Api\V1\AdministrationOverviewController;
 use App\Http\Controllers\Api\V1\AuthenticatedSessionController;
 use App\Http\Controllers\Api\V1\AuthenticatedUserController;
+use App\Http\Controllers\Api\V1\CalendarEventController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DashboardSummaryController;
 use App\Http\Controllers\Api\V1\DepartmentIndexController;
@@ -14,6 +16,7 @@ use App\Http\Controllers\Api\V1\PasswordRecoveryController;
 use App\Http\Controllers\Api\V1\ProfileSetupController;
 use App\Http\Controllers\Api\V1\ProgramIndexController;
 use App\Http\Controllers\Api\V1\SessionHeartbeatController;
+use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\UserRoleManagementController;
 use App\Models\AcademicYear;
 use App\Models\Department;
@@ -56,6 +59,27 @@ Route::prefix('v1')->middleware('throttle:60,1')->group(function (): void {
 
         Route::get('/dashboard/summary', DashboardSummaryController::class)
             ->name('api.v1.dashboard.summary');
+
+        Route::get('/calendar-events', [CalendarEventController::class, 'index'])
+            ->name('api.v1.calendar-events.index');
+        Route::post('/calendar-events', [CalendarEventController::class, 'store'])
+            ->name('api.v1.calendar-events.store');
+        Route::put('/calendar-events/{calendarEventId}', [CalendarEventController::class, 'update'])
+            ->name('api.v1.calendar-events.update');
+        Route::delete('/calendar-events/{calendarEventId}', [CalendarEventController::class, 'destroy'])
+            ->name('api.v1.calendar-events.destroy');
+
+        Route::get('/tasks', [TaskController::class, 'index'])
+            ->name('api.v1.tasks.index');
+        Route::post('/tasks', [TaskController::class, 'store'])
+            ->name('api.v1.tasks.store');
+        Route::put('/tasks/{taskId}', [TaskController::class, 'update'])
+            ->name('api.v1.tasks.update');
+        Route::delete('/tasks/{taskId}', [TaskController::class, 'destroy'])
+            ->name('api.v1.tasks.destroy');
+
+        Route::get('/activity-timeline', ActivityTimelineController::class)
+            ->name('api.v1.activity-timeline.index');
 
         Route::post('/dashboard/sync', [DashboardController::class, 'sync'])
             ->name('api.v1.dashboard.sync');
