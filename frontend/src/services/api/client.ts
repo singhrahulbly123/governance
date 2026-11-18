@@ -1,12 +1,21 @@
 import { application } from "@/config/application";
 
-function csrfToken(): string | null {
-    const token = document.cookie
-        .split("; ")
-        .find((cookie) => cookie.startsWith("XSRF-TOKEN="))
-        ?.split("=")[1];
+function resolveApiUrl(): string {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== "undefined" && window.location.hostname === "127.0.0.1") {
+        return "http://127.0.0.1:8000";
+    }
+    return application.apiUrl;
+}
 
-    return token ? decodeURIComponent(token) : null;
+function csrfToken(): string | null {
+    const cookie = document.cookie
+        .split("; ")
+        .find((entry) => entry.startsWith("XSRF-TOKEN="));
+
+    return cookie ? decodeURIComponent(cookie.slice("XSRF-TOKEN=".length)) : null;
 }
 
 export async function apiRequest(path: string, options: RequestInit = {}): Promise<Response> {
@@ -21,7 +30,7 @@ export async function apiRequest(path: string, options: RequestInit = {}): Promi
         }
     }
 
-    return fetch(`${application.apiUrl}${path}`, {
+    return fetch(`${resolveApiUrl()}${path}`, {
         credentials: "include",
         ...options,
         headers,

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureMfaVerified;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -19,16 +20,21 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : route('login'));
+
         $middleware->alias([
             'permission' => EnsureUserHasPermission::class,
             'role' => EnsureUserHasRole::class,
+            'mfa.verified' => EnsureMfaVerified::class,
         ]);
 
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is('api/*')
+                || str_contains($request->getRequestUri(), '/api/')
+                || $request->expectsJson(),
         );
 
         $exceptions->render(function (ValidationException $exception, Request $request) {

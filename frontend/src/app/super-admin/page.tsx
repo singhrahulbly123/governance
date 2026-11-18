@@ -1,6 +1,10 @@
 import { AccessGate } from "@/features/administration/access-gate";
-import { SuperAdministratorDashboard } from "@/features/administration/super-administrator-dashboard";
+import { DashApp } from "@/features/dashboard/dash-app";
 
 export default function SuperAdministratorPage() {
-    return <AccessGate requiredRole="super-administrator"><SuperAdministratorDashboard /></AccessGate>;
+    return (
+        <AccessGate requiredRole="super-administrator" bare>
+            <DashApp initialRole="faculty" initialRoute="users-roles" />
+        </AccessGate>
+    );
 }

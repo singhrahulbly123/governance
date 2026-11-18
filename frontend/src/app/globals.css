@@ -1,4 +1,158 @@
 @import "tailwindcss";
 
-:root { --background: #f8fafc; --foreground: #0f172a; }
-body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+:root {
+    --background: #f8fafc;
+    --foreground: #1f2937;
+
+    /* Font — Poppins across the entire application */
+    --font-sans: var(--font-poppins), "Poppins", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-family-base: var(--font-sans);
+
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+
+    /* Primary — Indigo */
+    --indigo-50: #EEF2FF;
+    --indigo-100: #E0E7FF;
+    --indigo-300: #A5B4FC;
+    --indigo-500: #6366F1;
+    --indigo-700: #4338CA;
+    --indigo-900: #312E81;
+
+    /* Neutral — Slate */
+    --slate-50: #F8FAFC;
+    --slate-100: #F1F5F9;
+    --slate-200: #E2E8F0;
+    --slate-300: #CBD5E1;
+    --slate-400: #94A3B8;
+    --slate-500: #6B7280;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1F2937;
+
+    /* Semantic — RAG */
+    --green-fill: #DCFCE7;
+    --green-600: #16A34A;
+    --amber-fill: #FEF3C7;
+    --amber-600: #D97706;
+    --red-fill: #FEE2E2;
+    --red-600: #DC2626;
+
+    /* Accent — AI content marker */
+    --gold-700: #B45309;
+    --gold-bg: #FFFBEB;
+
+    /* Semantic aliases */
+    --brand: var(--indigo-700);
+    --brand-accent: var(--indigo-500);
+    --page-bg: var(--slate-50);
+    --surface-card: #FFFFFF;
+    --surface-raised: #FFFFFF;
+    --surface-sunken: var(--slate-50);
+    --surface-hover: var(--indigo-50);
+    --surface-selected: var(--indigo-100);
+    --border-default: var(--slate-200);
+    --border-interactive: var(--indigo-300);
+    --divider: var(--slate-200);
+    --text-primary: var(--slate-800);
+    --text-secondary: var(--slate-500);
+    --text-disabled: var(--slate-400);
+    --text-on-brand: #FFFFFF;
+    --link: var(--indigo-700);
+    --focus-ring: var(--indigo-700);
+
+    --status-good-bg: var(--green-fill);
+    --status-good-fg: var(--green-600);
+    --status-caution-bg: var(--amber-fill);
+    --status-caution-fg: var(--amber-600);
+    --status-stop-bg: var(--red-fill);
+    --status-stop-fg: var(--red-600);
+
+    /* Spacing tokens */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* Radius & elevation tokens */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-pill: 999px;
+    --radius-full: 9999px;
+
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -4px rgba(15, 23, 42, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1);
+
+    --topbar-height: 64px;
+    --sidenav-width: 240px;
+    --sidenav-collapsed: 64px;
+    --table-row-height: 48px;
+    --table-row-height-dense: 40px;
+    --content-max-width: 1536px;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    min-width: 320px;
+    background: var(--slate-100);
+    color: var(--slate-800);
+    font-family: var(--font-poppins), "Poppins", -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+@layer base {
+    a {
+        color: var(--indigo-700);
+        text-decoration: none;
+    }
+
+    a:hover {
+        color: var(--indigo-900);
+    }
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+    font-family: var(--font-sans);
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--indigo-700);
+}
+
+@keyframes dia-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes dia-shimmer {
+    0% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0 50%;
+    }
+}

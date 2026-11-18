@@ -1,4 +1,4 @@
 export const application = {
-    name: "DIA Thrive",
+    name: "ERP",
     apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
 } as const;
