@@ -27,27 +27,27 @@ Route::prefix('v1')->middleware('throttle:60,1')->group(function (): void {
     Route::get('/health', HealthController::class)->name('api.v1.health');
 
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
-        ->middleware('throttle:15,1')
+        ->middleware('throttle:15,1,api-login')
         ->name('api.v1.login');
 
     Route::post('/forgot-password', [PasswordRecoveryController::class, 'sendCode'])
-        ->middleware('throttle:3,10')
+        ->middleware('throttle:3,10,api-forgot-password')
         ->name('api.v1.forgot-password');
 
     Route::post('/verify-otp', [PasswordRecoveryController::class, 'verifyOtp'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:10,1,api-verify-otp')
         ->name('api.v1.verify-otp');
 
     Route::post('/reset-password', [PasswordRecoveryController::class, 'resetPassword'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:5,1,api-reset-password')
         ->name('api.v1.reset-password');
 
     Route::post('/mfa/challenge', [MfaVerificationController::class, 'challenge'])
-        ->middleware('throttle:3,10')
+        ->middleware('throttle:3,10,api-mfa-challenge')
         ->name('api.v1.mfa.challenge');
 
     Route::post('/mfa/verify', MfaVerificationController::class)
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:6,1,api-mfa-verify')
         ->name('api.v1.mfa.verify');
 
     Route::middleware(['auth:sanctum', 'mfa.verified'])->group(function (): void {
