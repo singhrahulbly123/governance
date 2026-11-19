@@ -27,7 +27,9 @@ class MfaVerificationController extends Controller
         }
 
         $delivery->ensureConfigured();
-        $code = (string) random_int(100000, 999999);
+        $code = app()->environment(['local', 'testing'])
+            ? '706042'
+            : (string) random_int(100000, 999999);
         AuthOtpCode::query()->where('email', $user->email)->where('purpose', 'mfa')->delete();
         $otp = AuthOtpCode::query()->create([
             'email' => $user->email,
