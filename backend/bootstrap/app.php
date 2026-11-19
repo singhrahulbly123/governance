@@ -76,9 +76,11 @@ return Application::configure(basePath: dirname(__DIR__))
             $status = $exception->getStatusCode();
 
             return response()->json([
-                'message' => $status === Response::HTTP_NOT_FOUND
-                    ? 'Resource not found.'
-                    : 'The request could not be completed.',
+                'message' => match ($status) {
+                    Response::HTTP_NOT_FOUND => 'Resource not found.',
+                    Response::HTTP_TOO_MANY_REQUESTS => 'Too many requests. Please wait a few minutes before trying again.',
+                    default => 'The request could not be completed.',
+                },
             ], $status);
         });
 

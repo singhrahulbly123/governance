@@ -6,7 +6,6 @@ import {
     AuthApiError,
     changeCurrentPassword,
     extendActiveSession,
-    getCachedAuthUser,
     getCurrentUser,
     requestMfaChallenge,
     requestPasswordResetCode,
@@ -985,8 +984,8 @@ export function MfaScreen({
                         </div>
                     )}
                     <ResendRow
-                        validity={120}
-                        unlockAfter={5}
+                        validity={300}
+                        unlockAfter={300}
                         onResend={handleResendChallenge}
                     />
                     <div className="h-px bg-slate-100" />
@@ -1398,13 +1397,7 @@ export function StandaloneAuthView({ initialScreen }: { initialScreen: AuthScree
 
     useEffect(() => {
         if (initialScreen === "mfa") {
-            const cachedUser = getCachedAuthUser();
-            if (!cachedUser) {
-                window.location.replace("/login");
-                return;
-            }
-
-            setCurrentUser(cachedUser);
+            window.location.replace("/login");
             return;
         }
 
@@ -1413,7 +1406,7 @@ export function StandaloneAuthView({ initialScreen }: { initialScreen: AuthScree
                 if (u) setCurrentUser(u);
             })
             .catch(() => undefined);
-    }, []);
+    }, [initialScreen]);
 
     const userSummary = toUserSummary(currentUser);
 
@@ -1462,7 +1455,7 @@ export function StandaloneAuthView({ initialScreen }: { initialScreen: AuthScree
             {screen === "profile" && (
                 <ProfileScreen go={go} user={userSummary} onProfileUpdated={setCurrentUser} />
             )}
-            {screen === "mfa" && <MfaScreen go={go} user={userSummary} />}
+            {screen === "mfa" && initialScreen !== "mfa" && <MfaScreen go={go} user={userSummary} />}
             {screen === "sessionwarn" && <SessionWarnScreen go={go} />}
             {screen === "session" && <SessionScreen go={go} />}
             {screen === "unauthorized" && (
