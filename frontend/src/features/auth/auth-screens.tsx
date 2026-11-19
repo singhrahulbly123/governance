@@ -6,6 +6,7 @@ import {
     AuthApiError,
     changeCurrentPassword,
     extendActiveSession,
+    getCachedAuthUser,
     getCurrentUser,
     requestMfaChallenge,
     requestPasswordResetCode,
@@ -872,7 +873,14 @@ export function MfaScreen({
     useEffect(() => {
         requestMfaChallenge(user.email)
             .then((res) => setDemoMfaCode(res.demo_code ?? null))
-            .catch(() => undefined);
+            .catch((reason: unknown) => {
+                if (reason instanceof AuthApiError && reason.status === 401) {
+                    window.location.replace("/login");
+                    return;
+                }
+
+                setErr(reason instanceof Error ? reason.message : "Could not start MFA verification.");
+            });
     }, [user.email]);
 
     const complete = async (val: string) => {
@@ -913,8 +921,13 @@ export function MfaScreen({
             const res = await requestMfaChallenge(user.email);
             setDemoMfaCode(res.demo_code ?? null);
             setErr("");
-        } catch {
-            // ignore
+        } catch (reason) {
+            if (reason instanceof AuthApiError && reason.status === 401) {
+                window.location.replace("/login");
+                return;
+            }
+
+            setErr(reason instanceof Error ? reason.message : "Could not resend the verification code.");
         }
     };
 
@@ -927,13 +940,13 @@ export function MfaScreen({
                 desc={
                     <>
                         Your role (<strong>{user.role}</strong>) requires a second step. Enter the
-                        6-digit code from your authenticator app.
+                        6-digit sign-in verification code.
                     </>
                 }
             >
                 <div className="flex flex-col gap-4.5">
                     {demoMfaCode && (
-                        <Banner tone="info" title="Authenticator code">
+                        <Banner tone="info" title="Verification code">
                             <div className="flex items-center justify-between gap-2">
                                 <span>
                                     Code:{" "}
@@ -1384,6 +1397,17 @@ export function StandaloneAuthView({ initialScreen }: { initialScreen: AuthScree
     const [verifiedCode, setVerifiedCode] = useState("");
 
     useEffect(() => {
+        if (initialScreen === "mfa") {
+            const cachedUser = getCachedAuthUser();
+            if (!cachedUser) {
+                window.location.replace("/login");
+                return;
+            }
+
+            setCurrentUser(cachedUser);
+            return;
+        }
+
         getCurrentUser()
             .then((u) => {
                 if (u) setCurrentUser(u);
