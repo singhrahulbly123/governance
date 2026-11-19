@@ -25,7 +25,7 @@ class UpdateCalendarEventRequest extends FormRequest
         return [
             'title' => ['sometimes', 'required', 'string', 'max:180'],
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
-            'event_type' => ['sometimes', 'required', 'string', Rule::in(['personal', 'class', 'meeting', 'deadline', 'other'])],
+            'event_type' => ['sometimes', 'required', 'string', Rule::in(['personal', 'class', 'workshop', 'meeting', 'deadline', 'visit', 'other'])],
             'starts_at' => ['sometimes', 'required', 'date'],
             'ends_at' => ['sometimes', 'nullable', 'date'],
             'is_all_day' => ['sometimes', 'required', 'boolean'],

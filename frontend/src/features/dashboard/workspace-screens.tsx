@@ -141,15 +141,55 @@ type EventDraft = {
 const emptyEvent: EventDraft = {
     title: "",
     description: "",
-    event_type: "personal",
+    event_type: "class",
     starts_at: "",
     ends_at: "",
     is_all_day: false,
     location: "",
 };
 
+type CalendarView = "week" | "month";
+
+const calendarEventTypes: Record<string, { label: string; color: string }> = {
+    class: { label: "Class", color: "var(--indigo-700)" },
+    workshop: { label: "Workshop / meeting", color: "var(--gold-700)" },
+    meeting: { label: "Meeting", color: "var(--gold-700)" },
+    deadline: { label: "Deadline", color: "var(--red-600)" },
+    visit: { label: "Site visit", color: "var(--green-600)" },
+    personal: { label: "Personal", color: "var(--slate-600)" },
+    other: { label: "Other", color: "var(--slate-600)" },
+};
+
+function addCalendarDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
+function mondayOf(date: Date): Date {
+    const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    result.setDate(result.getDate() - ((result.getDay() + 6) % 7));
+    return result;
+}
+
+function calendarDateKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function calendarEventDateKey(value: string): string {
+    return calendarDateKey(new Date(value));
+}
+
+function calendarTime(value: string, isAllDay: boolean): string {
+    return isAllDay
+        ? "All day"
+        : new Date(value).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
 export function CalendarWorkspaceScreen() {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [view, setView] = useState<CalendarView>("week");
+    const [visibleDate, setVisibleDate] = useState(() => new Date());
     const [draft, setDraft] = useState<EventDraft>(emptyEvent);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -157,10 +197,20 @@ export function CalendarWorkspaceScreen() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
+    const rangeStart = view === "week"
+        ? mondayOf(visibleDate)
+        : mondayOf(new Date(visibleDate.getFullYear(), visibleDate.getMonth(), 1));
+    const rangeDays = view === "week" ? 7 : 42;
+    const rangeEnd = addCalendarDays(rangeStart, rangeDays - 1);
+    const rangeStartIso = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate()).toISOString();
+    const rangeEndDate = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate(), 23, 59, 59, 999);
+    const rangeEndIso = rangeEndDate.toISOString();
+    const eventsUrl = `/api/v1/calendar-events?${new URLSearchParams({ from: rangeStartIso, to: rangeEndIso, per_page: "100" })}`;
+
     async function refreshEvents(): Promise<void> {
         setError("");
         try {
-            setEvents(await loadCollection<CalendarEvent>("/api/v1/calendar-events"));
+            setEvents(await loadCollection<CalendarEvent>(eventsUrl));
         } catch (requestError) {
             setError(requestError instanceof Error ? requestError.message : "Could not load calendar events.");
         } finally {
@@ -170,14 +220,37 @@ export function CalendarWorkspaceScreen() {
 
     useEffect(() => {
         let cancelled = false;
-        loadCollection<CalendarEvent>("/api/v1/calendar-events")
+        loadCollection<CalendarEvent>(eventsUrl)
             .then((data) => { if (!cancelled) setEvents(data); })
             .catch((requestError: unknown) => {
                 if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Could not load calendar events.");
             })
             .finally(() => { if (!cancelled) setLoading(false); });
         return () => { cancelled = true; };
-    }, []);
+    }, [eventsUrl]);
+
+    const calendarDays = Array.from({ length: rangeDays }, (_, index) => addCalendarDays(rangeStart, index));
+    const eventsByDate = new Map<string, CalendarEvent[]>();
+    for (const event of events) {
+        const key = calendarEventDateKey(event.starts_at);
+        eventsByDate.set(key, [...(eventsByDate.get(key) ?? []), event]);
+    }
+
+    const rangeLabel = view === "week"
+        ? `${rangeStart.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${rangeEnd.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+        : visibleDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+    function changePeriod(direction: number): void {
+        setVisibleDate((current) => {
+            const next = new Date(current);
+            if (view === "week") {
+                next.setDate(next.getDate() + direction * 7);
+            } else {
+                next.setMonth(next.getMonth() + direction, 1);
+            }
+            return next;
+        });
+    }
 
     function beginEdit(event: CalendarEvent): void {
         setDraft({
@@ -194,7 +267,9 @@ export function CalendarWorkspaceScreen() {
     }
 
     function beginCreate(): void {
-        setDraft({ ...emptyEvent });
+        const defaultStart = new Date(visibleDate);
+        defaultStart.setHours(9, 0, 0, 0);
+        setDraft({ ...emptyEvent, starts_at: localDateTime(defaultStart.toISOString()) });
         setEditingId(null);
         setIsFormOpen(true);
     }
@@ -240,15 +315,37 @@ export function CalendarWorkspaceScreen() {
     return (
         <WorkspacePage
             title="My Calendar"
-            subtitle="Create and manage your own calendar events. Changes are saved to the account database."
-            action={<Button onClick={beginCreate}>Add event</Button>}
+            subtitle={rangeLabel}
+            action={
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <div role="group" aria-label="Calendar view" style={{ display: "inline-flex", background: "var(--slate-100)", borderRadius: "var(--radius-md)", padding: 3, gap: 2 }}>
+                        {(["week", "month"] as const).map((calendarView) => (
+                            <button key={calendarView} type="button" aria-pressed={view === calendarView} onClick={() => setView(calendarView)} style={{ padding: "6px 14px", border: "none", borderRadius: 6, cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600, textTransform: "capitalize", background: view === calendarView ? "#fff" : "transparent", color: view === calendarView ? "var(--indigo-700)" : "var(--slate-500)", boxShadow: view === calendarView ? "var(--shadow-sm)" : "none" }}>{calendarView}</button>
+                        ))}
+                    </div>
+                    <Button variant="secondary" onClick={() => setVisibleDate(new Date())}>Jump to today</Button>
+                    <Button onClick={beginCreate}>Add event</Button>
+                </div>
+            }
         >
             <ErrorNotice message={error} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                    {Object.entries(calendarEventTypes).filter(([type]) => ["class", "workshop", "deadline", "visit"].includes(type)).map(([type, details]) => (
+                        <span key={type} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--slate-600)" }}><span style={{ width: 10, height: 10, borderRadius: 3, background: details.color }} />{details.label}</span>
+                    ))}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Button variant="secondary" size="sm" aria-label="Previous period" onClick={() => changePeriod(-1)}>‹</Button>
+                    <span style={{ minWidth: 184, textAlign: "center", color: "var(--slate-700)", fontSize: 13, fontWeight: 600 }}>{rangeLabel}</span>
+                    <Button variant="secondary" size="sm" aria-label="Next period" onClick={() => changePeriod(1)}>›</Button>
+                </div>
+            </div>
             {isFormOpen && (
                 <ContentCard title={editingId === null ? "New calendar event" : "Edit calendar event"} style={{ marginBottom: 18 }}>
                     <form onSubmit={submitEvent} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
                         <label style={fieldStyle}>Title<Input required maxLength={180} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label>
-                        <label style={fieldStyle}>Type<select style={controlStyle} value={draft.event_type} onChange={(e) => setDraft({ ...draft, event_type: e.target.value })}><option value="personal">Personal</option><option value="class">Class</option><option value="meeting">Meeting</option><option value="deadline">Deadline</option><option value="other">Other</option></select></label>
+                        <label style={fieldStyle}>Type<select style={controlStyle} value={draft.event_type} onChange={(e) => setDraft({ ...draft, event_type: e.target.value })}><option value="class">Class</option><option value="workshop">Workshop / meeting</option><option value="meeting">Meeting</option><option value="deadline">Deadline</option><option value="visit">Site visit</option><option value="personal">Personal</option><option value="other">Other</option></select></label>
                         <label style={fieldStyle}>Starts<input required type="datetime-local" style={controlStyle} value={draft.starts_at} onChange={(e) => setDraft({ ...draft, starts_at: e.target.value })} /></label>
                         <label style={fieldStyle}>Ends (optional)<input type="datetime-local" style={controlStyle} value={draft.ends_at} min={draft.starts_at || undefined} onChange={(e) => setDraft({ ...draft, ends_at: e.target.value })} /></label>
                         <label style={fieldStyle}>Location<input maxLength={180} style={controlStyle} value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })} /></label>
@@ -258,23 +355,44 @@ export function CalendarWorkspaceScreen() {
                     </form>
                 </ContentCard>
             )}
-            <ContentCard title="Upcoming and past events" action={<Badge>{events.length} saved</Badge>}>
-                {loading ? <EmptyBlock icon="Clock" title="Loading calendar" desc="Reading your saved events…" /> : events.length === 0 ? <EmptyBlock icon="Calendar" title="Your calendar is empty" desc="Add an event to start building your personal calendar." /> : (
-                    <div>
-                        {events.map((event, index) => (
-                            <div key={event.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderTop: index ? "1px solid var(--slate-100)" : "none" }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><strong style={{ color: "var(--slate-800)", fontSize: 14 }}>{event.title}</strong><Badge tone="brand">{event.event_type}</Badge>{event.is_all_day && <Badge>All day</Badge>}</div>
-                                    <div style={{ color: "var(--slate-500)", fontSize: 12, marginTop: 5 }}>{displayDate(event.starts_at)}{event.ends_at ? ` – ${displayDate(event.ends_at)}` : ""}{event.location ? ` · ${event.location}` : ""}</div>
-                                    {event.description && <div style={{ color: "var(--slate-600)", fontSize: 13, marginTop: 5 }}>{event.description}</div>}
-                                </div>
-                                <Button size="sm" variant="secondary" onClick={() => beginEdit(event)}>Edit</Button>
-                                <Button size="sm" variant="danger" onClick={() => void deleteEvent(event)}>Delete</Button>
-                            </div>
-                        ))}
+            {loading ? <ContentCard><EmptyBlock icon="Clock" title="Loading calendar" desc="Reading your saved events…" /></ContentCard> : events.length === 0 ? <ContentCard><EmptyBlock icon="Calendar" title="No events in this period" desc="Add an event or move to another week or month." /></ContentCard> : (
+                <>
+                    <div style={{ overflowX: "auto", paddingBottom: 8 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(124px, 1fr))", gap: 10, minWidth: 920 }}>
+                            {calendarDays.map((date) => {
+                                const key = calendarDateKey(date);
+                                const dayEvents = eventsByDate.get(key) ?? [];
+                                const isToday = key === calendarDateKey(new Date());
+                                const isCurrentMonth = date.getMonth() === visibleDate.getMonth();
+                                return (
+                                    <div key={key} style={{ minHeight: view === "week" ? 190 : 128, background: isCurrentMonth || view === "week" ? "var(--surface-card)" : "var(--slate-50)", border: `1px solid ${isToday ? "var(--indigo-700)" : "var(--slate-200)"}`, borderRadius: "var(--radius-md)", boxShadow: "var(--shadow-sm)", overflow: "hidden" }}>
+                                        <button type="button" onClick={() => { const start = new Date(date); start.setHours(9, 0, 0, 0); setVisibleDate(date); setDraft({ ...emptyEvent, starts_at: localDateTime(start.toISOString()) }); setEditingId(null); setIsFormOpen(true); }} style={{ width: "100%", textAlign: "center", padding: "10px 0", background: isToday ? "var(--indigo-50)" : "var(--slate-50)", border: 0, borderBottom: "1px solid var(--slate-200)", cursor: "pointer" }}>
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: isToday ? "var(--indigo-700)" : "var(--slate-400)", textTransform: "uppercase" }}>{date.toLocaleDateString(undefined, { weekday: "short" })}</div>
+                                            <div style={{ fontSize: 18, fontWeight: 700, color: isToday ? "var(--indigo-700)" : "var(--slate-800)" }}>{date.getDate()}</div>
+                                        </button>
+                                        <div style={{ padding: 7, display: "flex", flexDirection: "column", gap: 6 }}>
+                                            {dayEvents.length === 0 ? <div style={{ fontSize: 11, color: "var(--slate-300)", textAlign: "center", padding: "12px 0" }}>—</div> : dayEvents.map((event) => {
+                                                const color = calendarEventTypes[event.event_type]?.color ?? "var(--slate-600)";
+                                                return (
+                                                    <div key={event.id} style={{ position: "relative", padding: "6px 22px 6px 8px", borderRadius: 6, background: `color-mix(in srgb, ${color} 10%, #fff)`, borderLeft: `3px solid ${color}` }}>
+                                                        <button type="button" onClick={() => beginEdit(event)} style={{ width: "100%", padding: 0, border: 0, background: "transparent", textAlign: "left", cursor: "pointer" }}>
+                                                            <div style={{ color, fontSize: 11, fontWeight: 700, fontFeatureSettings: '"tnum" 1' }}>{calendarTime(event.starts_at, event.is_all_day)}</div>
+                                                            <div style={{ color: "var(--slate-800)", fontSize: 12, fontWeight: 500, lineHeight: 1.3 }}>{event.title}</div>
+                                                            {event.location && <div style={{ color: "var(--slate-400)", fontSize: 10 }}>{event.location}</div>}
+                                                        </button>
+                                                        <button type="button" aria-label={`Delete ${event.title}`} title="Delete event" onClick={() => void deleteEvent(event)} style={{ position: "absolute", top: 2, right: 4, padding: "0 3px", border: 0, background: "transparent", color, cursor: "pointer", fontSize: 14 }}>×</button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
-                )}
-            </ContentCard>
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}><Badge>{events.length} event{events.length === 1 ? "" : "s"} in this {view}</Badge></div>
+                </>
+            )}
         </WorkspacePage>
     );
 }
