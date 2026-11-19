@@ -355,7 +355,7 @@ export function CalendarWorkspaceScreen() {
                     </form>
                 </ContentCard>
             )}
-            {loading ? <ContentCard><EmptyBlock icon="Clock" title="Loading calendar" desc="Reading your saved events…" /></ContentCard> : events.length === 0 ? <ContentCard><EmptyBlock icon="Calendar" title="No events in this period" desc="Add an event or move to another week or month." /></ContentCard> : (
+            {loading ? <ContentCard><EmptyBlock icon="Clock" title="Loading calendar" desc="Reading your saved events…" /></ContentCard> : (
                 <>
                     <div style={{ overflowX: "auto", paddingBottom: 8 }}>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(124px, 1fr))", gap: 10, minWidth: 920 }}>
