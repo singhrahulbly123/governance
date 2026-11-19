@@ -26,16 +26,17 @@ class MfaVerificationController extends Controller
             return response()->json(['message' => 'Sign in again to start MFA verification.'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $isTemporaryAdminTest = app()->environment('production')
-            && strtolower($user->email) === 'admin@example.com';
-
-        if (! $isTemporaryAdminTest) {
-            $delivery->ensureConfigured();
-        }
-
-        $code = ($isTemporaryAdminTest || app()->environment(['local', 'testing']))
+        $delivery->ensureConfigured();
+        $code = app()->environment(['local', 'testing'])
             ? '706042'
             : (string) random_int(100000, 999999);
+        $adminEmail = strtolower(trim((string) config('app.initial_super_administrator.email')));
+        $adminRecipient = trim((string) config('services.mfa.super_admin_recipient'));
+        $recipient = $adminEmail !== ''
+            && strtolower(trim($user->email)) === $adminEmail
+            && $adminRecipient !== ''
+                ? $adminRecipient
+                : $user->email;
         AuthOtpCode::query()->where('email', $user->email)->where('purpose', 'mfa')->delete();
         $otp = AuthOtpCode::query()->create([
             'email' => $user->email,
@@ -46,9 +47,7 @@ class MfaVerificationController extends Controller
         ]);
 
         try {
-            if (! $isTemporaryAdminTest) {
-                $delivery->send($user->email, $code, 'mfa');
-            }
+            $delivery->send($recipient, $code, 'mfa');
         } catch (Throwable $exception) {
             $otp->delete();
             report($exception);
